@@ -40,8 +40,16 @@ nations = readr::read_csv('./data/gbd/Nation_List.csv')
 subnations = readr::read_csv('./data/gbd/Nation2Subnations.csv')
 unique(subnations$Country)
 
+
+sf::write_sf(gaul,'./data/gbd/gaul_location_match.gdb')
+
+
+gaul  |> 
+  dplyr::filter(country == "Norway")
+
 fs::dir_ls('./data/gbd/map/', regexp = "^./data/gbd/map/MAP.*\\.geojson$") |> 
-  sf::read_sf()
+  purrr::map_dfr(sf::read_sf) |> 
+  sf::st_cast("MULTIPOLYGON") -> subregions
 
 sf::read_sf('./data/gbd/map/WORLD_MAP.geojson') -> global_maps
 
