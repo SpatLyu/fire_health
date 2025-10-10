@@ -1,5 +1,11 @@
 library(tidyverse)
 
+nations = readr::read_csv('./data/gbd/Nation_List.csv')
+subnations = readr::read_csv('./data/gbd/Nation2Subnations.csv')
+unique(subnations$Country)
+subnations |> 
+  dplyr::filter(Country == "United States of America")
+
 cvds_prov = readr::read_rds('./data/gbd/Cardiovascular diseases/Cardiovascular_diseases.rds') |> 
   tibble::as_tibble()
 cvds_prov = readr::read_csv('./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_province.csv')
@@ -9,14 +15,35 @@ dalys_cvds = cvds_prov |>
                 sex == "Both" &
                 age == "Age-standardized")
 
-cvds_prov = arrow::open_dataset("./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_integrated.csv",format = "csv")
+
+
+cvds_prov = arrow::open_dataset("./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_integrated.csv",
+                                format = "csv")
+
+metric_cvds = cvds_prov |> 
+  dplyr::distinct(measure,metric,sex,age) |> 
+  dplyr::collect()
+
+metric_cvds |> 
+  dplyr::filter(measure == "Incidence" &
+                metric  == "Number" &
+                sex == "Both") |> 
+  dplyr::distinct(age) |> 
+  dplyr::pull(age)
 
 dalys_cvds = cvds_prov |> 
-  dplyr::filter(measure == "DALYs (Disability-Adjusted Life Years)" &
-                metric  == "Rate" &
+  dplyr::filter(measure == "Incidence" &
+                metric  == "Number" &
                 sex == "Both" &
-                age == "Age-standardized") |> 
+                age == "All ages") |> 
   dplyr::collect()
+
+cal_cvds = dalys_cvds |> 
+  dplyr::filter(location == "California")
+
+uscan = sf::read_sf('../../download/uscan/fired_uscan_2000_to_2024_events.gpkg')
+
+
 
 dalys_cvds |> 
   dplyr::count(location,year) |> 
@@ -36,9 +63,7 @@ dalys_cvds |>
   dplyr::filter(location == "South Asia") |> 
   dplyr::arrange(year)
 
-nations = readr::read_csv('./data/gbd/Nation_List.csv')
-subnations = readr::read_csv('./data/gbd/Nation2Subnations.csv')
-unique(subnations$Country)
+
 
 
 sf::write_sf(gaul,'./data/gbd/gaul_location_match.gdb')
