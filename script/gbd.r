@@ -3,19 +3,18 @@ library(tidyverse)
 nations = readr::read_csv('./data/gbd/Nation_List.csv')
 subnations = readr::read_csv('./data/gbd/Nation2Subnations.csv')
 unique(subnations$Country)
-subnations |> 
-  dplyr::filter(Country == "United States of America")
+us.states = subnations |> 
+  dplyr::filter(Country == "United States of America") |> 
+  dplyr::select(state = Subnations)
 
-cvds_prov = readr::read_rds('./data/gbd/Cardiovascular diseases/Cardiovascular_diseases.rds') |> 
-  tibble::as_tibble()
-cvds_prov = readr::read_csv('./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_province.csv')
-dalys_cvds = cvds_prov |> 
-  dplyr::filter(measure == "DALYs (Disability-Adjusted Life Years)" &
-                metric  == "Rate" &
-                sex == "Both" &
-                age == "Age-standardized")
-
-
+# cvds_prov = readr::read_rds('./data/gbd/Cardiovascular diseases/Cardiovascular_diseases.rds') |> 
+#   tibble::as_tibble()
+# cvds_prov = readr::read_csv('./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_province.csv')
+# dalys_cvds = cvds_prov |> 
+#   dplyr::filter(measure == "DALYs (Disability-Adjusted Life Years)" &
+#                 metric  == "Rate" &
+#                 sex == "Both" &
+#                 age == "Age-standardized")
 
 cvds_prov = arrow::open_dataset("./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_integrated.csv",
                                 format = "csv")
@@ -31,43 +30,70 @@ metric_cvds |>
   dplyr::distinct(age) |> 
   dplyr::pull(age)
 
-dalys_cvds = cvds_prov |> 
+us_cvds = cvds_prov |> 
   dplyr::filter(measure == "Incidence" &
                 metric  == "Number" &
                 sex == "Both" &
-                age == "All ages") |> 
+                age == "All ages" &
+                location %in% us.states$state) |> 
   dplyr::collect()
 
-cal_cvds = dalys_cvds |> 
-  dplyr::filter(location == "California")
+us_cvds |>
+  dplyr::count(location,year) |>
+  dplyr::arrange(dplyr::desc(n))
 
-uscan = sf::read_sf('../../download/uscan/fired_uscan_2000_to_2024_events.gpkg')
-
-
-
-dalys_cvds |> 
-  dplyr::count(location,year) |> 
-  dplyr::arrange(dplyr::desc(n)) |> 
-  dplyr::filter(n == 2) |> 
+us_cvds |>
+  dplyr::count(location,year) |>
+  dplyr::filter(n == 2) |>
   dplyr::distinct(location)
 
-dalys_cvds |> 
-  dplyr::filter(location == "North Africa and Middle East") |> 
+us_cvds = arrow::open_dataset("./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_province.csv",
+                              format = "csv") |> 
+  dplyr::filter(measure == "Incidence" &
+                  metric  == "Number" &
+                  sex == "Both" &
+                  age == "All ages" &
+                  location == "Georgia") |> 
+  dplyr::collect() |> 
+  dplyr::bind_rows(dplyr::filter(us_cvds,location != "Georgia"))
+
+us_fires = arrow::read_parquet('./data/us_fires.parquet') |> 
+  dplyr::select(ig_year,state = location, 
+                fire_area = tot_ar_km2_split,
+                fire_dur = event_dur) |> 
+  dplyr::group_by(ig_year,state) |> 
+  dplyr::summarise(fire_area = sum(fire_area)) |> 
+  dplyr::ungroup() |> 
+  
+  dplyr::collect()
+
+unique(us_fires$state)
+unique(us_cvds$location)
+
+match(unique(us_fires$state),unique(us_cvds$location))
+
+df = us_fires |> 
+  dplyr::filter(ig_year >= 2001 & ig_year <= 2023) |> 
+  dplyr::left_join(us_cvds,
+                   by = dplyr::join_by(state == location,
+                                       ig_year == year)) |> 
+  dplyr::select(state,year = ig_year,fire_area,val) |> 
   dplyr::arrange(year)
 
-dalys_cvds |> 
-  dplyr::filter(location == "Punjab") |> 
-  dplyr::arrange(year)
+source('./script/utils.r')
 
-dalys_cvds |> 
-  dplyr::filter(location == "South Asia") |> 
-  dplyr::arrange(year)
+cal_res = infocausality::surd(dplyr::filter(df,state == "California"),
+                              "val", c("fire_area","fire_area","fire_area"),
+                              lag = rep(1:3,times = 1), bin = 10, cores = 4)
+utils_plot_surd(cal_res) + ggview::canvas(5,2)
 
+tex_res = infocausality::surd(dplyr::filter(df,state == "Texas"),
+                              "val", c("fire_area","fire_area","fire_area"),
+                              lag = rep(1:3,times = 1), bin = 10, cores = 4)
+utils_plot_surd(tex_res) + ggview::canvas(5,2)
 
-
-
-sf::write_sf(gaul,'./data/gbd/gaul_location_match.gdb')
-
+df |> 
+  dplyr::filter(state == "California")
 
 gaul  |> 
   dplyr::filter(country == "Norway")
