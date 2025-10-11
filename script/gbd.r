@@ -92,6 +92,14 @@ tex_res = infocausality::surd(dplyr::filter(df,state == "Texas"),
                               lag = rep(1:3,times = 1), bin = 10, cores = 4)
 utils_plot_surd(tex_res) + ggview::canvas(5,2)
 
+tEDM::fnn(dplyr::filter(df,state == "Texas"), "val",
+          eps = stats::sd(dplyr::pull(dplyr::filter(df,state == "Texas"),val)))
+
+tEDM::simplex(dplyr::filter(df,state == "Texas"), "val", "fire_area")
+
+tEDM::ccm(dplyr::filter(df,state == "Texas"), "val", "fire_area", 
+          E = 3, k = 11, libsizes = 11:23)
+
 df |> 
   dplyr::filter(state == "California")
 
