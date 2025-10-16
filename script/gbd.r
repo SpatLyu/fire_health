@@ -50,10 +50,10 @@ us_cvds |>
 us_cvds = arrow::open_dataset("./data/gbd/Cardiovascular diseases/Cardiovascular_diseases_province.csv",
                               format = "csv") |> 
   dplyr::filter(measure == "Incidence" &
-                  metric  == "Number" &
-                  sex == "Both" &
-                  age == "All ages" &
-                  location == "Georgia") |> 
+                metric  == "Number" &
+                sex == "Both" &
+                age == "All ages" &
+                location == "Georgia") |> 
   dplyr::collect() |> 
   dplyr::bind_rows(dplyr::filter(us_cvds,location != "Georgia"))
 
@@ -84,12 +84,12 @@ source('./script/utils.r')
 
 cal_res = infocausality::surd(dplyr::filter(df,state == "California"),
                               "val", c("fire_area","fire_area","fire_area"),
-                              lag = rep(1:3,times = 1), bin = 10, cores = 4)
+                              lag = rep(2:4,times = 1), bin = 10, cores = 4)
 utils_plot_surd(cal_res) + ggview::canvas(5,2)
 
 tex_res = infocausality::surd(dplyr::filter(df,state == "Texas"),
                               "val", c("fire_area","fire_area","fire_area"),
-                              lag = rep(1:3,times = 1), bin = 10, cores = 4)
+                              lag = rep(2:4,times = 1), bin = 10, cores = 4)
 utils_plot_surd(tex_res) + ggview::canvas(5,2)
 
 tEDM::fnn(dplyr::filter(df,state == "Texas"), "val",
