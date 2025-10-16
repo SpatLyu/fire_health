@@ -38,6 +38,9 @@ usd = arrow::read_parquet('./data/gbd/us_diseases.parquet') |>
                 sex == "Both" &
                 age == "All ages") |> 
   dplyr::select(state = location,year,disease = cause,val) |> 
+  tidyr::pivot_wider(id_cols = c(state,year),
+                     names_from = disease,
+                     values_from = val) |> 
   dplyr::collect()
 
 us_fires = arrow::read_parquet('./data/us_fires.parquet') |> 
@@ -126,3 +129,6 @@ us_airp = airp |>
 
 usd = dplyr::left_join(usd, us_airp, by = dplyr::join_by(year,state))
 readr::write_csv(usd,'./data/us_fire_health.csv')
+
+usd |> 
+  dplyr::filter(state == 'California', year > 2002)
