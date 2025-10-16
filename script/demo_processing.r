@@ -71,6 +71,34 @@ airp = fs::dir_ls('./data/air/', regexp = ".csv$") |>
                 (`Parameter Name` == "Wind Speed - Scalar" & `Sample Duration` == "1 HOUR") |
                 (`Parameter Name` == "Wind Direction - Resultant" & `Sample Duration` == "1 HOUR"))
 
+air_sites = readr::read_csv('./data/air/aqs_sites/aqs_sites.csv') |> 
+  dplyr::filter(Latitude != 0 | Longitude != 0)
+
+air_sites |> 
+  dplyr::filter(Datum == "NAD83") |> 
+  dplyr::mutate(x = Longitude, y = Latitude) |> 
+  sf::st_as_sf(coords = c("x","y"), crs = "epsg:4269") |> 
+  sf::st_transform("epsg:4326") -> air_sites1
+
+air_sites |> 
+  dplyr::filter(Datum == "WGS84") |> 
+  dplyr::mutate(x = Longitude, y = Latitude) |> 
+  sf::st_as_sf(coords = c("x","y"), crs = "epsg:4326") |> 
+  dplyr::bind_rows(air_sites1) -> air_sites
+
+us.states.sf = sf::read_sf('./data/gaul_location_match.gdb/') |> 
+  dplyr::filter(gaul0_name == "United States of America") |> 
+  dplyr::select(state = gaul1_name)
+
+sf::sf_use_s2(FALSE)
+
+air_sites = sf::st_join(air_sites, us.states.sf) |> 
+  sf::st_drop_geometry() |> 
+  dplyr::select(state,`Site Num` = `Site Number`,`State Code`,`County Code`)
+
+airp = airp |> 
+  dplyr::left_join(air_sites, by = dplyr::join_by(`Site Num`,`State Code`,`County Code`))
+
 arrow::write_parquet(
   airp,
   "./data/air/us_air.parquet",
@@ -78,3 +106,23 @@ arrow::write_parquet(
   use_dictionary = TRUE  
 )
 
+us_airp = airp |> 
+  dplyr::group_by(state,Year,`Parameter Name`) |> 
+  dplyr::summarise(val = mean(`Arithmetic Mean`,na.rm = TRUE)) |> 
+  dplyr::ungroup() |> 
+  dplyr::rename(year = Year) |> 
+  tidyr::pivot_wider(id_cols = c(state,year),names_from = `Parameter Name`,values_from = val) |> 
+  dplyr::rename(pressure = `Average Ambient Pressure`,
+                temperature = `Average Ambient Temperature`,
+                co = `Carbon monoxide`,
+                o3 = Ozone,
+                pm10 = `PM10 - LC`,
+                no2 = `Nitrogen dioxide (NO2)`,
+                rh = `Relative Humidity`,
+                pm25 = `PM2.5 - Local Conditions`,
+                ws = `Wind Speed - Scalar`,
+                wd = `Wind Direction - Resultant`,
+                ch2o = Formaldehyde)
+
+usd = dplyr::left_join(usd, us_airp, by = dplyr::join_by(year,state))
+readr::write_csv(usd,'./data/us_fire_health.csv')
