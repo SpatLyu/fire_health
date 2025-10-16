@@ -64,7 +64,6 @@ us_fires = arrow::read_parquet('./data/us_fires.parquet') |>
   dplyr::group_by(ig_year,state) |> 
   dplyr::summarise(fire_area = sum(fire_area)) |> 
   dplyr::ungroup() |> 
-  
   dplyr::collect()
 
 unique(us_fires$state)
