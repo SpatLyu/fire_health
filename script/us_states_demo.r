@@ -8,13 +8,8 @@ dt = readr::read_csv('./data/us_fire_health.csv') |>
   dplyr::arrange(year) %>% 
   dplyr::select(state,dplyr::all_of(c(diseases,names(.)[9:20])))
 
-dt |> 
-  dplyr::filter(state == us.states[11]) |> 
-  tibble::view()
-
 us.states = unique(dt$state)
-us.states = us.states[-match("District of Columbia",us.states)]
-match(us.states,geofacet::us_state_grid1$name)
+match(us.states,geofacet::us_state_grid2$name)
 
 source('./script/utils.r')
 
