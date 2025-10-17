@@ -35,7 +35,7 @@ utils_plot_surd = \(surd_list,threshold = 0){
     ggplot2::theme_bw() +
     ggplot2::theme(
       axis.ticks.x = ggplot2::element_blank(),
-      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
+      axis.text.x = ggplot2::element_text(angle = 90, hjust = 1),
       panel.grid = ggplot2::element_blank(),
       panel.border = ggplot2::element_rect(color = "black", linewidth = 2)
     )
@@ -54,4 +54,32 @@ utils_plot_surd = \(surd_list,threshold = 0){
     )
   
   patchwork::wrap_plots(p1, p2, ncol = 2, widths = c(10,1))
+}
+
+utils_process_surd_result = \(surd_list,threshold = 0){
+  I_unique = surd_list$unique
+  I_synergistic = surd_list$synergistic
+  I_redundant = surd_list$redundant
+  info_leak = surd_list$info_leak
+  
+  df = tibble::tibble(
+    label = c(
+      paste0("U[", names(I_unique), "]"),
+      paste0("S[", names(I_synergistic), "]"),
+      paste0("R[", names(I_redundant), "]")
+    ),
+    value = c(as.numeric(I_unique),
+              as.numeric(I_synergistic),
+              as.numeric(I_redundant)),
+    type = c(rep("unique", length(I_unique)),
+             rep("synergistic", length(I_synergistic)),
+             rep("redundant", length(I_redundant)))
+  )
+  
+  df$value = df$value / sum(df$value)
+  if(threshold > 0){
+    df = dplyr::filter(df, value > threshold)
+  }
+  return(dplyr::bind_rows(df,tibble::tribble(~label,~value,~type,
+                                             "Info Leak", info_leak, "info leak")))
 }
