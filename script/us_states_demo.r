@@ -58,13 +58,21 @@ cl0 = ggplot2::ggplot(causation_lag0,
   ggplot2::geom_col() +
   ggplot2::coord_flip() +
   geofacet::facet_geo(~ state,grid = "us_state_grid2") +
+  ggplot2::scale_y_continuous(
+    name = NULL,
+    breaks = function(x) {
+      rng = range(x, na.rm = TRUE)
+      pretty(rng, n = 3)
+    },
+    expand = ggplot2::expansion(mult = c(0, 0.05))
+  ) +
+  ggplot2::scale_fill_discrete(name = "Variable") +
   ggplot2::theme_bw()
 
 cl0 + ggview::canvas(10,8)
 
 a = analysis_diseases("Texas",1)
 a = analysis_diseases("California",1)
-tex_df = 
 
 cal_df = dt |> 
   dplyr::filter(state == "California") |> 
