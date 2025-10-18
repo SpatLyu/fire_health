@@ -74,6 +74,17 @@ plot_causation_us = \(disease = "Cardiovascular diseases",lag = 0){
       legend.justification = c("right", "bottom"))
 }
 
+
+purrr::map_dfr(us.states,analysis_diseases) -> temp_res
+
+us.states[-match(unique(temp_res$state),us.states)]
+
+dt |>
+  dplyr::filter(state %in% us.states[-match(unique(temp_res$state),us.states)]) |>
+  dplyr::arrange(state) |>
+  tibble::view()
+
+
 for (i in seq_along(diseases)) {
   purrr::map(0:3,\(.x) 
              ggview::save_ggplot(plot_causation_us(diseases[i],.x) + ggview::canvas(10,8),
