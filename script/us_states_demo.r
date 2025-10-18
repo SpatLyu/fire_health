@@ -81,17 +81,20 @@ for (i in seq_along(diseases)) {
                                  device = cairo_pdf))
 }
 
+paste0("./figure/",rep(diseases,each = 4),"_causation_lag",0:3,".pdf") |>
+  purrr::walk(utils_pdf2jpg)
 
-fig1 = patchwork::wrap_plots(purrr::map(0:3,\(.x) 
-                                        plot_causation_us(diseases[1],.x)), 
-                             ncol = 2) +
-  #patchwork::plot_layout(guides = "collect") +
-  patchwork::plot_annotation(tag_levels = 'a')
+for (i in seq_along(diseases)) {
+  ggview::save_ggplot(patchwork::wrap_plots(purrr::map(0:3,\(.x) figpatch::fig(paste0("./figure/",diseases[i],"_causation_lag",.x,".jpg"))),
+                        ncol = 2) +
+    patchwork::plot_annotation(tag_levels = 'a') + 
+    ggview::canvas(20,16),
+    paste0("./figure/",diseases[i],"_causation.pdf"),
+    device = cairo_pdf)
+}
 
-fig1 + ggview::canvas(20,16)
-ggview::save_ggplot(fig1 + ggview::canvas(20,16),
-                    paste0("./figure/",diseases[1],"_causation.pdf"),
-                    device = cairo_pdf)
+paste0("./figure/",diseases,"_causation.pdf") |>
+  purrr::walk(utils_pdf2jpg)
 
 plot_causation_us(diseases[1],3) + ggview::canvas(10,8)
 

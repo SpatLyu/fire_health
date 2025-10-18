@@ -83,3 +83,11 @@ utils_process_surd_result = \(surd_list,threshold = 0){
   return(dplyr::bind_rows(df,tibble::tribble(~label,~value,~type,
                                              "Info Leak", info_leak, "info leak")))
 }
+
+utils_pdf2jpg = \(pdfname, dpi = 300) {
+  if (!file.exists(pdfname)) stop("File not found: ", pdfname)
+  jpgname = sub("\\.pdf$", ".jpg", pdfname, ignore.case = FALSE)
+  pdftools::pdf_convert(pdf = pdfname, filenames = jpgname, dpi = dpi)
+  message("✅ Converted: ", basename(pdfname), " → ", basename(jpgname))
+  invisible(jpgname)
+}
