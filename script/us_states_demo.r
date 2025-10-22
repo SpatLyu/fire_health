@@ -3,9 +3,10 @@ require("geofacet")
 source('./script/utils.r')
 
 diseases = fs::dir_ls('./data/gbd/',type = "directory") |> 
-  stringr::str_sub(12,-1)
+  stringr::str_sub(12,-1) |> 
+  stringr::str_replace_all("_", " ")
 
-dt = readr::read_csv('./data/us_fire_health.csv') |> 
+dt = readr::read_csv('./data/us_fire_health_alternative.csv') |> 
   dplyr::filter(year >= 2001) |> 
   dplyr::arrange(year) %>% 
   dplyr::select(state,dplyr::all_of(c(diseases,names(.)[9:20])))

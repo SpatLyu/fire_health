@@ -59,9 +59,9 @@ fs::dir_ls('./data/air/concentration by monitor/') |>
 
 airp = fs::dir_ls('./data/air/', regexp = ".csv$") |> 
   purrr::map_dfr(readr::read_csv) |> 
-  dplyr::filter(`Certification Indicator` %in% c("Certification not required",
-                                                 "Certified",
-                                                 "Certified - QA issues identified")) |> 
+  # dplyr::filter(`Certification Indicator` %in% c("Certification not required",
+  #                                                "Certified",
+  #                                                "Certified - QA issues identified")) |> 
   dplyr::filter((`Parameter Name` == "PM2.5 - Local Conditions" & `Sample Duration` == "24-HR BLK AVG") |
                 (`Parameter Name` == "PM10 - LC" & `Sample Duration` == "24 HOUR") |
                 (`Parameter Name` == "Ozone" & `Sample Duration` == "8-HR RUN AVG BEGIN HOUR") |
@@ -78,16 +78,21 @@ air_sites = readr::read_csv('./data/air/aqs_sites/aqs_sites.csv') |>
   dplyr::filter(Latitude != 0 | Longitude != 0)
 
 air_sites |> 
-  dplyr::filter(Datum == "NAD83") |> 
   dplyr::mutate(x = Longitude, y = Latitude) |> 
-  sf::st_as_sf(coords = c("x","y"), crs = "epsg:4269") |> 
-  sf::st_transform("epsg:4326") -> air_sites1
+  sf::st_as_sf(coords = c("x","y"), crs = "epsg:4326") -> air_sites
 
-air_sites |> 
-  dplyr::filter(Datum == "WGS84") |> 
-  dplyr::mutate(x = Longitude, y = Latitude) |> 
-  sf::st_as_sf(coords = c("x","y"), crs = "epsg:4326") |> 
-  dplyr::bind_rows(air_sites1) -> air_sites
+# # unify datum
+# air_sites |> 
+#   dplyr::filter(Datum == "NAD83") |> 
+#   dplyr::mutate(x = Longitude, y = Latitude) |> 
+#   sf::st_as_sf(coords = c("x","y"), crs = "epsg:4269") |> 
+#   sf::st_transform("epsg:4326") -> air_sites1
+
+# air_sites |> 
+#   dplyr::filter(Datum == "WGS84") |> 
+#   dplyr::mutate(x = Longitude, y = Latitude) |> 
+#   sf::st_as_sf(coords = c("x","y"), crs = "epsg:4326") |> 
+#   dplyr::bind_rows(air_sites1) -> air_sites
 
 us.states.sf = sf::read_sf('./data/gaul_location_match.gdb/') |> 
   dplyr::filter(gaul0_name == "United States of America") |> 
@@ -109,6 +114,21 @@ arrow::write_parquet(
   use_dictionary = TRUE  
 )
 
+airp |> 
+  dplyr::rename(year = Year) |> 
+  tidyr::pivot_wider(id_cols = c(state,year),names_from = `Parameter Name`,values_from = val) |> 
+  dplyr::rename(pressure = `Average Ambient Pressure`,
+                temperature = `Average Ambient Temperature`,
+                co = `Carbon monoxide`,
+                o3 = Ozone,
+                pm10 = `PM10 - LC`,
+                no2 = `Nitrogen dioxide (NO2)`,
+                rh = `Relative Humidity`,
+                pm25 = `PM2.5 - Local Conditions`,
+                ws = `Wind Speed - Scalar`,
+                wd = `Wind Direction - Resultant`,
+                ch2o = Formaldehyde)
+
 us_airp = airp |> 
   dplyr::group_by(state,Year,`Parameter Name`) |> 
   dplyr::summarise(val = mean(`Arithmetic Mean`,na.rm = TRUE)) |> 
@@ -128,7 +148,9 @@ us_airp = airp |>
                 ch2o = Formaldehyde)
 
 usd = dplyr::left_join(usd, us_airp, by = dplyr::join_by(year,state))
-readr::write_csv(usd,'./data/us_fire_health.csv')
+readr::write_csv(usd,'./data/us_fire_health_alternative.csv')
 
 usd |> 
   dplyr::filter(state == 'California', year > 2002)
+
+
